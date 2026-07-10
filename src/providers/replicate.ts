@@ -14,6 +14,33 @@ async function fetchUrl(url: string): Promise<Buffer> {
   return Buffer.from(await res.arrayBuffer());
 }
 
+function retryAfterMs(err: unknown): number | null {
+  if (!(err instanceof Error)) return null;
+  if (!err.message.includes("429")) return null;
+  const match = err.message.match(/"retry_after"\s*:\s*(\d+)/);
+  // Add 2s buffer on top of the server's suggested wait
+  return match ? (parseInt(match[1]) + 2) * 1000 : 12_000;
+}
+
+async function runWithRetry(
+  replicate: Replicate,
+  modelSlug: string,
+  input: Record<string, unknown>,
+  retriesLeft = 2,
+): Promise<unknown> {
+  try {
+    return await replicate.run(modelSlug as `${string}/${string}`, { input });
+  } catch (err) {
+    const waitMs = retryAfterMs(err);
+    if (waitMs !== null && retriesLeft > 0) {
+      console.log(`Replicate 429 — retrying in ${waitMs / 1000}s… (${retriesLeft} left)`);
+      await new Promise((res) => setTimeout(res, waitMs));
+      return runWithRetry(replicate, modelSlug, input, retriesLeft - 1);
+    }
+    throw err;
+  }
+}
+
 async function outputToBuffer(output: unknown): Promise<Buffer> {
   if (output instanceof Buffer) return output;
   if (output instanceof Uint8Array) return Buffer.from(output);
@@ -58,10 +85,7 @@ export async function generateWithReplicate(
     const replicate = getClient();
     const input = { prompt, ...(model.extraInput ?? {}) };
 
-    const output = await replicate.run(
-      model.replicateModel as `${string}/${string}`,
-      { input }
-    );
+    const output = await runWithRetry(replicate, model.replicateModel, input);
 
     const imageBuffer = await outputToBuffer(output);
 
