@@ -30,6 +30,7 @@ export async function generateWithOpenAI(
             size: "1024x1024" as const,
             quality: "high" as const,
             output_format: "png",
+            response_format: "b64_json" as const,
             n: 1,
           } as Parameters<typeof openai.images.generate>[0])
         : ({

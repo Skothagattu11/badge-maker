@@ -1,5 +1,13 @@
 import type { BadgeSpec, GenerationResult } from "./types.js";
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 export interface BadgeResult {
   badge: BadgeSpec;
   results: GenerationResult[];
@@ -9,25 +17,25 @@ export function generateReport(badgeResults: BadgeResult[]): string {
   const rows = badgeResults.map(({ badge, results }) => {
     const cells = results.map((r) => {
       const imgTag = r.imageBuffer
-        ? `<img src="data:image/png;base64,${r.imageBuffer.toString("base64")}" alt="${r.label}" />`
-        : `<div class="error">${r.error ?? "Unknown error"}</div>`;
+        ? `<img src="data:image/png;base64,${r.imageBuffer.toString("base64")}" alt="${escapeHtml(r.label)}" />`
+        : `<div class="error">${escapeHtml(r.error ?? "Unknown error")}</div>`;
 
       const cost = r.costUsd != null ? `$${r.costUsd.toFixed(2)}` : "~compute";
       const timing = `${(r.timingMs / 1000).toFixed(1)}s`;
 
       return `
         <div class="cell">
-          <div class="model-label">${r.label}</div>
+          <div class="model-label">${escapeHtml(r.label)}</div>
           ${imgTag}
           <div class="meta">&#x23F1; ${timing} &nbsp; &#x1F4B2; ${cost}</div>
-          <div class="notes" contenteditable="true" data-model="${r.modelId}" data-badge="${badge.id}" placeholder="Your notes..."></div>
+          <div class="notes" contenteditable="true" data-model="${escapeHtml(r.modelId)}" data-badge="${escapeHtml(badge.id)}" placeholder="Your notes..."></div>
         </div>`;
     }).join("");
 
     return `
       <section class="badge-row">
-        <h2>${badge.name} <span class="badge-meta">${badge.category} / ${badge.rarity}</span></h2>
-        <p class="achievement">${badge.achievement}</p>
+        <h2>${escapeHtml(badge.name)} <span class="badge-meta">${escapeHtml(badge.category)} / ${escapeHtml(badge.rarity)}</span></h2>
+        <p class="achievement">${escapeHtml(badge.achievement)}</p>
         <div class="grid">${cells}</div>
       </section>`;
   }).join("");
