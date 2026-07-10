@@ -1,5 +1,17 @@
 [
   {
+    "id": "the_starter",
+    "category": "consistency",
+    "name": "The Starter",
+    "achievement": "Complete your first daily check-in",
+    "heroSymbol": "lone silhouetted figure mid-stride stepping through a carved stone archway — four explicit depth layers: LAYER 1 (closest, foreground) the thick raised circular bronze rim protruding toward the viewer with a visible cast shadow falling inward; LAYER 2 the dark carved stone arch with rough embossed edges; LAYER 3 the lone silhouetted figure suspended mid-stride; LAYER 4 (deepest, background) the glowing dawn horizon receding far into the distance — strong parallax separation between every layer",
+    "environment": "deep spatial scene through the arch: extreme foreground rim casts hard inner shadow; near-midground stone floor and arch base; far-midground misty sage plains fading with atmospheric haze; deep background amber-gold horizon melting into midnight navy sky — each plane visibly separated by atmospheric perspective and lighting falloff, creating convincing three-dimensional depth",
+    "metaphor": "crossing a threshold into something greater — the moment of deciding to begin, suspended in the last step before everything changes",
+    "accentPalette": "warm amber sunrise gold and aged bronze, misty sage grey, deep midnight navy",
+    "emotion": "quiet resolve and anticipation — pulled forward by light, weight of a beginning",
+    "rarity": "bronze"
+  },
+  {
     "id": "consistency-30",
     "category": "consistency",
     "name": "Unbroken",
