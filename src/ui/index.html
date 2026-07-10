@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entropy Badge Generator</title>
+  <style>
+    :root {
+      --bg: #091640;
+      --surface: #0D1E3D;
+      --surface-2: #0F2356;
+      --pressed: #1A3A6A;
+      --gold: #D6A74F;
+      --gold-light: #F3D890;
+      --text: #F3D890;
+      --muted: #BCC5CE;
+      --err: #e05c5c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      padding: 0.875rem 1.25rem;
+      border-bottom: 1px solid var(--pressed);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 0.9rem; font-weight: 600; color: var(--gold); }
+    header p  { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+    .header-tip { font-size: 0.65rem; color: var(--muted); opacity: 0.7; }
+
+    .layout { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── Sidebar ── */
+    .sidebar { width: 200px; border-right: 1px solid var(--pressed); overflow-y: auto; flex-shrink: 0; }
+    .sidebar-hdr { padding: 0.6rem 1rem; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--pressed); }
+    .badge-item { padding: 0.7rem 1rem; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.1s; border-left: 2px solid transparent; }
+    .badge-item:hover { background: var(--surface); }
+    .badge-item.active { background: var(--surface-2); border-left-color: var(--gold); }
+    .badge-item-name { font-size: 0.8rem; font-weight: 500; }
+    .badge-item-meta { font-size: 0.63rem; color: var(--muted); margin-top: 2px; text-transform: capitalize; }
+
+    /* ── Main ── */
+    .main { flex: 1; overflow-y: auto; padding: 1.5rem; }
+    .empty-state { height: 100%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.85rem; }
+    .badge-detail { max-width: 800px; }
+
+    .badge-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 2px; }
+    .badge-sub { font-size: 0.7rem; color: var(--muted); margin-bottom: 1.25rem; }
+
+    /* ── Fields ── */
+    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 1.25rem; }
+    .field { background: var(--surface); border-radius: 6px; padding: 0.65rem 0.75rem; }
+    .field.full { grid-column: 1 / -1; }
+    .field-lbl { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 3px; }
+    .field-val { font-size: 0.77rem; color: var(--muted); line-height: 1.4; }
+    .rtag { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
+    .rtag-bronze   { background: rgba(176,120,60,.2);  color: #C87941; }
+    .rtag-silver   { background: rgba(188,197,206,.15); color: #BCC5CE; }
+    .rtag-gold     { background: rgba(214,167,79,.2);  color: #D6A74F; }
+    .rtag-platinum { background: rgba(200,220,240,.15); color: #C8DCF0; }
+    .rtag-mythic   { background: rgba(160,100,220,.2); color: #C07AFF; }
+
+    /* ── Prompt preview ── */
+    .section { margin-bottom: 1.25rem; }
+    .section-lbl { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
+    .section-lbl.clickable { cursor: pointer; user-select: none; }
+    .section-lbl.clickable:hover { color: var(--text); }
+    .section-lbl .arrow { font-size: 0.5rem; }
+    .prompt-box { background: var(--surface); border-radius: 6px; padding: 0.75rem; font-size: 0.67rem; color: var(--muted); line-height: 1.6; font-family: monospace; white-space: pre-wrap; max-height: 175px; overflow-y: auto; display: none; }
+    .prompt-box.open { display: block; }
+
+    /* ── Model chips ── */
+    .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .chip { display: flex; align-items: center; gap: 0.4rem; padding: 0.42rem 0.7rem; background: var(--surface); border-radius: 6px; cursor: pointer; font-size: 0.77rem; user-select: none; border: 1px solid transparent; transition: all 0.12s; }
+    .chip:hover { background: var(--surface-2); }
+    .chip.on { border-color: var(--gold); background: rgba(214,167,79,.1); }
+    .chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pressed); flex-shrink: 0; transition: background 0.12s; }
+    .chip.on .chip-dot { background: var(--gold); }
+
+    /* ── Generate button ── */
+    .gen-btn { margin-top: 1rem; padding: 0.55rem 1.4rem; background: var(--gold); color: var(--bg); border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.1s; }
+    .gen-btn:hover:not(:disabled) { background: var(--gold-light); }
+    .gen-btn:disabled { opacity: 0.45; cursor: not-allowed; background: var(--pressed); color: var(--muted); }
+
+    /* ── Results ── */
+    .results-hdr { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase; color: var(--muted); margin: 1.5rem 0 0.75rem; }
+    .results-grid { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .result-card { background: var(--surface); border-radius: 8px; padding: 0.875rem; width: 264px; border: 1px solid transparent; transition: border-color 0.15s; }
+    .result-card.winner { border-color: var(--gold); }
+    .result-model { font-size: 0.62rem; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.65rem; }
+    .result-card img { width: 100%; border-radius: 4px; display: block; margin-bottom: 0.5rem; }
+    .result-err { width: 100%; aspect-ratio: 1/1; background: rgba(224,92,92,.07); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--err); font-size: 0.7rem; padding: 1rem; text-align: center; margin-bottom: 0.5rem; border: 1px solid rgba(224,92,92,.2); }
+    .result-meta { font-size: 0.67rem; color: var(--muted); margin-bottom: 0.6rem; }
+    .result-actions { display: flex; gap: 0.4rem; }
+    .btn-sm { padding: 0.3rem 0.65rem; border-radius: 4px; font-size: 0.67rem; font-weight: 700; cursor: pointer; border: none; transition: all 0.1s; }
+    .btn-pick { background: var(--gold); color: var(--bg); }
+    .btn-pick:hover { background: var(--gold-light); }
+    .btn-dl { background: var(--pressed); color: var(--muted); }
+    .btn-dl:hover { background: var(--surface-2); color: var(--text); }
+    .dl-all-btn { margin-top: 1rem; padding: 0.38rem 0.9rem; background: var(--pressed); color: var(--muted); border: none; border-radius: 5px; font-size: 0.72rem; font-weight: 600; cursor: pointer; transition: all 0.1s; }
+    .dl-all-btn:hover { background: var(--surface-2); color: var(--text); }
+
+    /* ── Spinner ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.15); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 0.4rem; }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--pressed); border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Entropy Badge Generator</h1>
+      <p>Select a badge · review concept · generate</p>
+    </div>
+    <span class="header-tip">Edit badges.json in Claude Code to add or refine concepts</span>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-hdr">Badge Catalogue</div>
+      <div id="badge-list"></div>
+    </aside>
+    <main class="main" id="main">
+      <div class="empty-state">← Select a badge to begin</div>
+    </main>
+  </div>
+
+  <script>
+    let badges = [];
+    let models = [];
+    let activeBadge = null;
+    let selectedModels = new Set();
+    let promptOpen = false;
+    let lastResults = {};  // modelId → base64
+
+    async function init() {
+      try {
+        const [b, m] = await Promise.all([
+          fetch('/api/badges').then(r => r.json()),
+          fetch('/api/models').then(r => r.json()),
+        ]);
+        badges = b;
+        models = m;
+        renderSidebar();
+      } catch {
+        document.getElementById('badge-list').innerHTML =
+          '<div style="padding:1rem;font-size:0.75rem;color:var(--err);">Failed to connect.<br>Is the server running?</div>';
+      }
+    }
+
+    function renderSidebar() {
+      document.getElementById('badge-list').innerHTML = badges.map(b => `
+        <div class="badge-item ${activeBadge?.id === b.id ? 'active' : ''}" onclick="selectBadge('${esc(b.id)}')">
+          <div class="badge-item-name">${esc(b.name)}</div>
+          <div class="badge-item-meta">${esc(b.category)} · ${esc(b.rarity)}</div>
+        </div>
+      `).join('') || '<div style="padding:1rem;font-size:0.75rem;color:var(--muted);">No badges in badges.json</div>';
+    }
+
+    async function selectBadge(id) {
+      activeBadge = badges.find(b => b.id === id);
+      selectedModels = new Set(models.filter(m => m.enabled).map(m => m.id));
+      lastResults = {};
+      promptOpen = false;
+      renderSidebar();
+
+      document.getElementById('main').innerHTML =
+        '<div class="empty-state"><span class="spinner"></span>Loading preview…</div>';
+
+      let prompt = '';
+      try {
+        const r = await fetch(`/api/preview/${encodeURIComponent(id)}`);
+        const d = await r.json();
+        prompt = d.prompt ?? '';
+      } catch {
+        prompt = '(preview unavailable)';
+      }
+
+      renderDetail(prompt);
+    }
+
+    function renderDetail(prompt) {
+      const b = activeBadge;
+      document.getElementById('main').innerHTML = `
+        <div class="badge-detail">
+          <div class="badge-title">${esc(b.name)}</div>
+          <div class="badge-sub">${esc(b.category)} &middot; ${esc(b.achievement)}</div>
+
+          <div class="fields">
+            <div class="field">
+              <div class="field-lbl">Hero symbol</div>
+              <div class="field-val">${esc(b.heroSymbol)}</div>
+            </div>
+            <div class="field">
+              <div class="field-lbl">Environment</div>
+              <div class="field-val">${esc(b.environment)}</div>
+            </div>
+            <div class="field">
+              <div class="field-lbl">Accent palette</div>
+              <div class="field-val">${esc(b.accentPalette)}</div>
+            </div>
+            <div class="field">
+              <div class="field-lbl">Rarity</div>
+              <div class="field-val"><span class="rtag rtag-${esc(b.rarity)}">${esc(b.rarity)}</span></div>
+            </div>
+            <div class="field full">
+              <div class="field-lbl">Emotion &amp; tone</div>
+              <div class="field-val">${esc(b.emotion)}</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-lbl clickable" onclick="togglePrompt()">
+              <span class="arrow" id="p-arrow">▶</span> Prompt preview
+            </div>
+            <div class="prompt-box ${promptOpen ? 'open' : ''}" id="prompt-box">${esc(prompt)}</div>
+          </div>
+
+          <div class="section">
+            <div class="section-lbl">Generate with</div>
+            <div class="chips" id="model-chips">
+              ${models.map(m => `
+                <div class="chip ${selectedModels.has(m.id) ? 'on' : ''}"
+                     data-mid="${esc(m.id)}"
+                     onclick="toggleModel('${esc(m.id)}')">
+                  <div class="chip-dot"></div>${esc(m.label)}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <button class="gen-btn" id="gen-btn" onclick="generate()">Generate →</button>
+          <div id="results"></div>
+        </div>
+      `;
+    }
+
+    function togglePrompt() {
+      promptOpen = !promptOpen;
+      document.getElementById('prompt-box').classList.toggle('open', promptOpen);
+      document.getElementById('p-arrow').textContent = promptOpen ? '▼' : '▶';
+    }
+
+    function toggleModel(id) {
+      if (selectedModels.has(id)) selectedModels.delete(id);
+      else selectedModels.add(id);
+      document.querySelector(`.chip[data-mid="${id}"]`)?.classList.toggle('on', selectedModels.has(id));
+    }
+
+    async function generate() {
+      if (!activeBadge || selectedModels.size === 0) return;
+      const btn = document.getElementById('gen-btn');
+      const resultsEl = document.getElementById('results');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Generating…';
+      resultsEl.innerHTML = '';
+      lastResults = {};
+
+      try {
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ badgeId: activeBadge.id, modelIds: [...selectedModels] }),
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        data.results.forEach(r => {
+          if (r.imageBase64) lastResults[r.modelId] = r.imageBase64;
+        });
+        renderResults(data.results);
+      } catch (e) {
+        resultsEl.innerHTML = `<div style="color:var(--err);font-size:0.8rem;margin-top:1rem;">
+          Generation failed: ${esc(String(e))}
+        </div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate →';
+      }
+    }
+
+    function renderResults(results) {
+      const hasAny = results.some(r => r.imageBase64);
+      document.getElementById('results').innerHTML = `
+        <div class="results-hdr">Results</div>
+        <div class="results-grid" id="results-grid">
+          ${results.map(r => `
+            <div class="result-card" id="card-${esc(r.modelId)}">
+              <div class="result-model">${esc(r.label)}</div>
+              ${r.imageBase64
+                ? `<img src="data:image/png;base64,${r.imageBase64}" alt="${esc(r.label)}" loading="lazy" />`
+                : `<div class="result-err">${esc(r.error ?? 'Generation failed')}</div>`
+              }
+              <div class="result-meta">
+                ⏱ ${(r.timingMs / 1000).toFixed(1)}s${r.costUsd != null ? ` &middot; $${r.costUsd.toFixed(2)}` : ' &middot; ~compute'}
+              </div>
+              ${r.imageBase64 ? `
+                <div class="result-actions">
+                  <button class="btn-sm btn-pick" onclick="pickWinner('${esc(r.modelId)}')">★ Pick</button>
+                  <button class="btn-sm btn-dl" onclick="downloadOne('${esc(r.modelId)}')">↓ Save PNG</button>
+                </div>` : ''}
+            </div>
+          `).join('')}
+        </div>
+        ${hasAny ? `<button class="dl-all-btn" onclick="downloadAll()">↓ Download all PNGs</button>` : ''}
+      `;
+    }
+
+    function pickWinner(modelId) {
+      document.querySelectorAll('.result-card').forEach(c => c.classList.remove('winner'));
+      document.getElementById(`card-${modelId}`)?.classList.add('winner');
+    }
+
+    function downloadOne(modelId) {
+      const b64 = lastResults[modelId];
+      if (!b64) return;
+      triggerDownload(b64, `${activeBadge.id}-${modelId}.png`);
+    }
+
+    function downloadAll() {
+      Object.entries(lastResults).forEach(([modelId, b64]) => {
+        triggerDownload(b64, `${activeBadge.id}-${modelId}.png`);
+      });
+    }
+
+    function triggerDownload(base64, filename) {
+      const a = document.createElement('a');
+      a.href = `data:image/png;base64,${base64}`;
+      a.download = filename;
+      a.click();
+    }
+
+    function esc(s) {
+      return String(s ?? '')
+        .replace(/&/g,  '&amp;')
+        .replace(/</g,  '&lt;')
+        .replace(/>/g,  '&gt;')
+        .replace(/"/g,  '&quot;')
+        .replace(/'/g,  '&#39;');
+    }
+
+    init();
+  </script>
+</body>
+</html>

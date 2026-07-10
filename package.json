@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "tsx src/index.ts",
+    "serve": "tsx src/server.ts",
     "test": "vitest run"
   },
   "dependencies": {
